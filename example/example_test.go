@@ -29,7 +29,7 @@ func TestGradient(t *testing.T) {
 		b := &bytes.Buffer{}
 		png.Encode(b, Gradient(test.Width, test.Height))
 		name := fmt.Sprintf("%dx%x.png", test.Width, test.Height)
-		gf.Add(name, b.Bytes())
+		gf.Add(b.Bytes(), name)
 	}
 	if err := gf.Test(); err != nil {
 		t.Fatal(err)
@@ -49,7 +49,7 @@ func TestRedOnly(t *testing.T) {
 		}
 		b := &bytes.Buffer{}
 		png.Encode(b, RedOnly(img))
-		out.Add(filepath.Base(path), b.Bytes())
+		out.Add(b.Bytes(), filepath.Base(path))
 	}
 	if err := out.Test(); err != nil {
 		t.Fatal(err)
