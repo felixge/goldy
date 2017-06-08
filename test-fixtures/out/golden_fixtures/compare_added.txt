@@ -1,0 +1,4 @@
+1 errors:
+unexpected file: test-fixtures/out/tmp/new
+
+run `EXAMPLE_HINT` to automatically update all files above
