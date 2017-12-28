@@ -2,6 +2,7 @@ package example
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"image/jpeg"
 	"image/png"
@@ -12,6 +13,28 @@ import (
 )
 
 var gc = goldy.DefaultConfig()
+
+func TestMarshalIndent(t *testing.T) {
+	tests := []struct {
+		Name  string
+		Input string
+	}{
+		{
+			"small_object", "{}",
+		},
+	}
+	gf := gc.GoldenFixtures("out", "marshal_indent")
+	for _, test := range tests {
+		b := &bytes.Buffer{}
+		if err := json.Indent(b, []byte(test.Input), "", "  "); err != nil {
+			b.WriteString(err.Error())
+		}
+		gf.Add(b.Bytes(), test.Name+".json")
+	}
+	if err := gf.Test(); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestGradient(t *testing.T) {
 	tests := []struct {
