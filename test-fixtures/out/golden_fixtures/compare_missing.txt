@@ -1,6 +1,0 @@
-3 errors:
-missing file: test-fixtures/out/tmp/dir_c/file_d
-missing file: test-fixtures/out/tmp/file_a
-missing file: test-fixtures/out/tmp/file_b
-
-run `EXAMPLE_HINT` to automatically update all files above

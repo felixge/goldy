@@ -1,11 +1,13 @@
 package goldy
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -48,93 +50,132 @@ func TestInputFixtures(t *testing.T) {
 	}
 }
 
+//func TestGoldenFixture(t *testing.T) {
+//dir := []string{"out", "golden_fixture"}
+//if err := os.RemoveAll(filepath.Join(append([]string{gc.Dir}, dir...)...)); err != nil {
+//t.Fatal(err)
+//}
+//gcc := gc // clone
+//gcc.Update = func() bool { return false }
+//gcc.Dir = filepath.Join()
+//if err := gc.GoldenFixture([]byte("foo bar"), dir...); err == nil {
+//t.Fatal("expected err")
+//} else {
+//fmt.Printf("%#v\n", err)
+//}
+
+//}
+
 func TestGoldenFixtures(t *testing.T) {
-	tmpDir := filepath.Join("test-fixtures", "out", "tmp")
-	if err := os.RemoveAll(tmpDir); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// There is a bit inception going on here because we're using the code we're
-	// testing to test itself. Since compilers consider self hosting a major
-	// achievement, we'll consider test code that is testing itself to be great
-	// here as well : p.
-	gf := gc.GoldenFixtures("out", "golden_fixtures")
-	for _, test := range []string{
-		"compare_missing",
-		"update_missing",
-		"update_changed_added",
-		"compare_good",
-		"compare_added",
-		"compare_modified",
-	} {
-		func(test string) {
-			testGf := &GoldenFixtures{
-				Dir:      tmpDir,
-				Hint:     "EXAMPLE_HINT",
-				Fixtures: Fixtures{},
-				Exclude:  IsDotfile,
-			}
-
-			testGf.Add([]byte("data_a"), "file_a")
-			testGf.Add([]byte("data_b"), "file_b")
-			testGf.Add([]byte("data_d"), "dir_c", "file_d")
-
-			var err error
-			switch test {
-			case "compare_missing":
-				// Initially our tmpDir doesn't exist, so we expect Test to produce
-				// errors for the missing files.
-			case "update_missing":
-				// Next do an update that creates the missing files. This should not
-				// produce an error.
-				testGf.Update = true
-			case "update_changed_added":
-				// Now create a new file and modify another one, then perform an update
-				// again. This should remove the new file and restore the modified one.
-				// This should not produce an error.
-				paths := []string{
-					filepath.Join(testGf.Dir, "remove_me"),
-					testGf.Fixtures.Paths()[0],
-				}
-				for _, path := range paths {
-					if err := ioutil.WriteFile(path, []byte(path), 0600); err != nil {
-						t.Fatal(err)
-					}
-				}
-				testGf.Update = true
-			case "compare_good":
-				// Now we perform a compare to make sure the previous update worked.
-				// This should not produce an error.
-			case "compare_added":
-				// Here we add two new files. One of them should be ignored because it
-				// starts with a dot, the other should produce an error.
-				for _, file := range []string{"new", ".hidden"} {
-					path := filepath.Join(testGf.Dir, file)
-					if err := ioutil.WriteFile(path, []byte(path), 0600); err != nil {
-						t.Fatal(err)
-					}
-					// Clean up before the next step.
-					defer os.Remove(path)
-				}
-			case "compare_modified":
-				// Here we modify the first file in the fixture. We expect this to
-				// produce an error message telling us that this file doesn't match.
-				path := testGf.Fixtures.Paths()[0]
-				if err := ioutil.WriteFile(path, []byte(test), 0600); err != nil {
-					t.Fatal(err)
-				}
-				// Clean up before the next step.
-				defer ioutil.WriteFile(path, testGf.Fixtures[path], 0600)
-			default:
-				panic("unknown test: " + test)
-			}
-
-			err = testGf.Test()
-			gf.Add([]byte(fmt.Sprintf("%v", err)), test+".txt")
-		}(test)
+	// There is a large number of test cases that need to be checked here, so
+	// we break them down in a few individual states a GoldenFixture and the
+	// filesystem can be in and then test all combinations of them.
+	states := []string{
+		"base",
+		"changed",
+		"ignore",
+		"missing",
+		"unexpected",
 	}
 
+	buf := &bytes.Buffer{}
+	combinations := 1 << uint(len(states))
+	for i := 0; i < combinations; i++ {
+		combo := []string{}
+		for j, state := range states {
+			if i&(1<<uint(j)) > 0 {
+				combo = append(combo, state)
+			}
+		}
+
+		test := strings.Join(combo, "_")
+		if test == "" {
+			test = "noop"
+		}
+		t.Run(test, func(t *testing.T) {
+			tmpDir := filepath.Join(gc.Dir, "tmp", test)
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Fatal(err)
+			} else if err := os.MkdirAll(tmpDir, 0700); err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tmpDir)
+
+			c := DefaultConfig()
+			c.Dir = filepath.Dir(tmpDir)
+			testGf := c.GoldenFixtures(filepath.Base(tmpDir))
+			testGf.Update = false
+
+			comboM := map[string]bool{}
+			for _, state := range combo {
+				comboM[state] = true
+				switch state {
+				case "base":
+					for _, name := range []string{"base.txt", ".hidden.txt"} {
+						data := []byte("data for: " + name)
+						if !IsDotfile(name) {
+							testGf.Add(data, name)
+						}
+						if err := ioutil.WriteFile(filepath.Join(tmpDir, name), data, 0600); err != nil {
+							t.Fatal(err)
+						}
+					}
+				case "ignore":
+					testGf.IgnoreUnexpected = true
+				case "missing":
+					name := "missing.txt"
+					testGf.Add([]byte("data for: "+name), name)
+				case "unexpected":
+					name := "unexpected.txt"
+					data := []byte("data for: " + name)
+					if err := ioutil.WriteFile(filepath.Join(tmpDir, name), data, 0600); err != nil {
+						t.Fatal(err)
+					}
+				case "changed":
+					name := "changed.txt"
+					data := []byte("data for: " + name)
+					if err := ioutil.WriteFile(filepath.Join(tmpDir, name), data, 0600); err != nil {
+						t.Fatal(err)
+					}
+					testGf.Add(append([]byte("changed "), data...), name)
+				default:
+					panic("BUG")
+				}
+			}
+
+			expectErr := (comboM["changed"] ||
+				comboM["missing"] ||
+				(comboM["unexpected"] && !comboM["ignore"]))
+
+			gotErr := testGf.Test()
+			if (gotErr != nil) != expectErr {
+				t.Fatalf("gotErr=%v expectErr=%t", gotErr, expectErr)
+			}
+
+			testGf.Update = true
+			if err := testGf.Test(); err != nil {
+				t.Fatalf("update error: %v", err)
+			}
+			testGf.Update = false
+			if err := testGf.Test(); err != nil {
+				t.Fatalf("re-test error: %v", err)
+			}
+
+			fmt.Fprintf(
+				buf,
+				"# (%d/%d) %s\n\n",
+				i+1,
+				combinations,
+				strings.Replace(test, "_", "\\_", -1),
+			)
+			fmt.Fprintf(buf, "```\n")
+			fmt.Fprintf(buf, "%v\n", gotErr)
+			fmt.Fprintf(buf, "```\n")
+		})
+	}
+
+	gf := gc.GoldenFixtures("out")
+	gf.Add(buf.Bytes(), "golden_fixtures.md")
 	if err := gf.Test(); err != nil {
 		t.Fatal(err)
 	}

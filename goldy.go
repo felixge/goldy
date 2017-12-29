@@ -77,6 +77,9 @@ type Config struct {
 	// Hint is a message displayed when golden fixtures fail comparison. It's
 	// intended to tell the user how to automatically update the fixtures.
 	Hint string
+	// IgnoreUnexpected is inherited by all GoldenFixtures created from this
+	// Config.
+	IgnoreUnexpected bool
 	// Exclude is called for every file when loading input or golden fixtures and
 	// allows to exclude it by returning false. Set to IsDotfile by WithDefaults.
 	Exclude func(path string) bool
@@ -98,12 +101,22 @@ func (c Config) WithDefaults() Config {
 // path inside c.Dir.
 func (c Config) GoldenFixtures(path ...string) *GoldenFixtures {
 	return &GoldenFixtures{
-		Dir:      filepath.Join(append([]string{c.Dir}, path...)...),
-		Fixtures: Fixtures{},
-		Update:   c.Update(),
-		Hint:     c.Hint,
-		Exclude:  IsDotfile,
+		Dir:              filepath.Join(append([]string{c.Dir}, path...)...),
+		Fixtures:         Fixtures{},
+		Update:           c.Update(),
+		Hint:             c.Hint,
+		IgnoreUnexpected: c.IgnoreUnexpected,
+		Exclude:          IsDotfile,
 	}
+}
+
+// GoldenFixture returns an error if the fixture at the given path does not
+// match the given data.
+func (c Config) GoldenFixture(data []byte, path ...string) error {
+	gf := c.GoldenFixtures(path...)
+	gf.IgnoreUnexpected = true
+	gf.Add(data)
+	return gf.Test()
 }
 
 // InputFixtures loads Fixtures from the given path inside of c.Dir.
@@ -125,6 +138,9 @@ type GoldenFixtures struct {
 	// Hint is displayed when comparing the in-memory fixtures with those on
 	// disk shows differences.
 	Hint string
+	// IgnoreUnexpected determines if unexpected files found in Dir are ignored
+	// when running Test().
+	IgnoreUnexpected bool
 	// Exclude allows to exclude on-disk files from the comparison/update.
 	Exclude func(path string) bool
 }
@@ -142,7 +158,17 @@ func (gf *GoldenFixtures) Diff() (Diff, error) {
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("failed to load golden fixtures: %s", err)
 	}
-	return gf.Fixtures.Diff(want), nil
+	diff := gf.Fixtures.Diff(want)
+
+	if gf.IgnoreUnexpected {
+		for path, result := range diff {
+			if result == DiffUnexpected {
+				delete(diff, path)
+			}
+		}
+	}
+
+	return diff, nil
 }
 
 // Test returns an error if the comparison between gf.Fixtures and the
@@ -165,7 +191,7 @@ func (gf *GoldenFixtures) update(diff Diff) error {
 	msg := make([]string, 0, len(diff))
 	for _, path := range diff.Paths() {
 		switch diff[path] {
-		case DiffAdded:
+		case DiffUnexpected:
 			if err := os.Remove(path); err != nil {
 				msg = append(msg, fmt.Sprintf("could not remove: %s: %s", path, err))
 			}
@@ -195,7 +221,7 @@ func (gf *GoldenFixtures) compare(diff Diff) error {
 	msg := make([]string, len(diff))
 	for i, path := range diff.Paths() {
 		switch diff[path] {
-		case DiffAdded:
+		case DiffUnexpected:
 			msg[i] = fmt.Sprintf("unexpected file: %s", path)
 		case DiffMissing:
 			msg[i] = fmt.Sprintf("missing file: %s", path)
@@ -265,7 +291,7 @@ func (a Fixtures) Diff(b Fixtures) Diff {
 	// in a.
 	for bPath, _ := range b {
 		if _, ok := a[bPath]; !ok {
-			diff[bPath] = DiffAdded
+			diff[bPath] = DiffUnexpected
 		}
 	}
 	return diff
@@ -306,8 +332,8 @@ type DiffKind string
 var (
 	// DiffMissing means that the file is only present in fixture a.
 	DiffMissing DiffKind = "missing"
-	// DiffAdded means that the file is only present in fixture b.
-	DiffAdded DiffKind = "added"
+	// DiffUnexpected means that the file is only present in fixture b.
+	DiffUnexpected DiffKind = "added"
 	// DiffChanged means that the file content in fixture a is different from b.
 	DiffChanged DiffKind = "changed"
 )
