@@ -125,6 +125,11 @@ func (c Config) InputFixtures(path ...string) (Fixtures, error) {
 	return Load(dir, c.Exclude)
 }
 
+// InputFixture returns the data for the fixture at the given path or an error.
+func (c Config) InputFixture(path ...string) ([]byte, error) {
+	return ioutil.ReadFile(filepath.Join(append([]string{c.Dir}, path...)...))
+}
+
 // GoldenFixtures is a set of fixture files that can be compared with files on
 // disk, or used to update them. Most users probably want to create instances
 // using a Config instance rather than initializing this struct directly.
