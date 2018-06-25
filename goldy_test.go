@@ -94,6 +94,7 @@ func TestGoldenFixtures(t *testing.T) {
 		"ignore",
 		"missing",
 		"unexpected",
+		"diff",
 	}
 
 	buf := &bytes.Buffer{}
@@ -156,6 +157,7 @@ func TestGoldenFixtures(t *testing.T) {
 						t.Fatal(err)
 					}
 					testGf.Add(append([]byte("changed "), data...), name)
+				case "diff":
 				default:
 					panic("BUG")
 				}
