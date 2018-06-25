@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/pmezard/go-difflib/difflib"
 )
 
 type Flag string
@@ -220,7 +222,7 @@ func (gf *GoldenFixtures) Test() error {
 	if flags[FlagUpdate] {
 		return gf.update(diff)
 	} else {
-		return gf.compare(diff)
+		return gf.compare(diff, flags[FlagDiff])
 	}
 }
 
@@ -251,7 +253,7 @@ func (gf *GoldenFixtures) update(diff Diff) error {
 	return nil
 }
 
-func (gf *GoldenFixtures) compare(diff Diff) error {
+func (gf *GoldenFixtures) compare(diff Diff, diffFlag bool) error {
 	if len(diff) == 0 {
 		return nil
 	}
@@ -264,16 +266,31 @@ func (gf *GoldenFixtures) compare(diff Diff) error {
 			msg = append(msg, fmt.Sprintf("missing file: %s", d.Path))
 		case DiffChanged:
 			msg = append(msg, fmt.Sprintf("changed file: %s", d.Path))
-			//dmp := diffmatchpatch.New()
-			//diffs := dmp.DiffMain(text1, text2, false)
+			if diffFlag {
+				msg = append(msg, textDiff(d.A, d.B))
+			}
 		}
 	}
 	return fmt.Errorf(
 		"%d errors:\n%s\n\nrun `%s` to automatically update all files above",
-		len(msg),
+		len(diff),
 		strings.Join(msg, "\n"),
 		gf.Hint,
 	)
+}
+
+func textDiff(a, b []byte) string {
+	diff := difflib.UnifiedDiff{
+		A:       difflib.SplitLines(string(a)),
+		B:       difflib.SplitLines(string(b)),
+		Context: 3,
+	}
+	text, _ := difflib.GetUnifiedDiffString(diff)
+	return indent(strings.TrimRight(text, "\n"))
+}
+
+func indent(s string) string {
+	return "  " + strings.Replace(s, "\n", "\n  ", -1)
 }
 
 // Load loads a Fixtures from the given path. The exclude func is called for every
