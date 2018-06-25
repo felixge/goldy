@@ -50,22 +50,6 @@ func TestInputFixtures(t *testing.T) {
 	}
 }
 
-//func TestGoldenFixture(t *testing.T) {
-//dir := []string{"out", "golden_fixture"}
-//if err := os.RemoveAll(filepath.Join(append([]string{gc.Dir}, dir...)...)); err != nil {
-//t.Fatal(err)
-//}
-//gcc := gc // clone
-//gcc.Update = func() bool { return false }
-//gcc.Dir = filepath.Join()
-//if err := gc.GoldenFixture([]byte("foo bar"), dir...); err == nil {
-//t.Fatal("expected err")
-//} else {
-//fmt.Printf("%#v\n", err)
-//}
-
-//}
-
 func TestGoldenFixtures(t *testing.T) {
 	// There is a large number of test cases that need to be checked here, so
 	// we break them down in a few individual states a GoldenFixture and the
