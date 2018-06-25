@@ -12,6 +12,32 @@ import (
 	"sync"
 )
 
+type Flag string
+
+const (
+	// FlagUpdate causes goldy to update any modified or missing fixtures and
+	// to delete any fixtures that were removed.
+	FlagUpdate Flag = "update"
+	// FlagVerbose causes goldly to print a diff for mismatching fixtures.
+	FlagVerbose Flag = "verbose"
+)
+
+func parseFlags(flags string) (map[Flag]bool, error) {
+	r := map[Flag]bool{}
+	if flags == "" {
+		return r, nil
+	}
+	for _, flag := range strings.Split(flags, ",") {
+		switch f := Flag(flag); f {
+		case FlagUpdate, FlagVerbose:
+			r[f] = true
+		default:
+			return nil, fmt.Errorf("unknown flag: %q", flag)
+		}
+	}
+	return r, nil
+}
+
 const (
 	// DefaultEnvName is the environment variable name used by DefaultConfig.
 	DefaultEnvName = "GOLDY"
@@ -29,13 +55,13 @@ func DefaultConfig() Config {
 // when calling Test on them.
 func EnvConfig(name string) Config {
 	return Config{
-		Update: func() bool { return os.Getenv(name) == "update" },
-		Hint:   name + "=update go test",
+		Flags: func() string { return os.Getenv(name) },
+		Hint:  name + "=update go test",
 	}.WithDefaults()
 }
 
 var (
-	flagValues = map[string]*bool{}
+	flagValues = map[string]*string{}
 	flagLock   sync.Mutex
 )
 
@@ -53,14 +79,14 @@ func FlagConfig(name string) Config {
 
 	// Adding our flag more than once would panic, so let's not do that.
 	if _, ok := flagValues[name]; !ok {
-		var b bool
-		flag.BoolVar(&b, name, false, "Update goldy test fixtures.")
-		flagValues[name] = &b
+		var val string
+		flag.StringVar(&val, name, "", "Goldy flags: update, verbose")
+		flagValues[name] = &val
 	}
 
 	return Config{
-		Hint:   "go test -" + name,
-		Update: func() bool { return *flagValues[name] },
+		Hint:  "go test -" + name,
+		Flags: func() string { return *flagValues[name] },
 	}.WithDefaults()
 }
 
@@ -70,10 +96,10 @@ type Config struct {
 	// Dir is the base dir used for loading input or golden fixtures. Set to
 	// "test-fixtures" by WithDefaults.
 	Dir string
-	// Update is a func that returns a bool which determines if golden fixtures
-	// should be updated or not. It's a func rather than a simple boolean due
+	// Flags is a func that returns a string containing flags that control goldy's
+	// behavior. It's a func rather than a simple string due
 	// to the complexity of implementing FlagConfig.
-	Update func() bool
+	Flags func() string
 	// Hint is a message displayed when golden fixtures fail comparison. It's
 	// intended to tell the user how to automatically update the fixtures.
 	Hint string
@@ -103,7 +129,7 @@ func (c Config) GoldenFixtures(path ...string) *GoldenFixtures {
 	return &GoldenFixtures{
 		Dir:              filepath.Join(append([]string{c.Dir}, path...)...),
 		Fixtures:         Fixtures{},
-		Update:           c.Update(),
+		Flags:            c.Flags(),
 		Hint:             c.Hint,
 		IgnoreUnexpected: c.IgnoreUnexpected,
 		Exclude:          IsDotfile,
@@ -138,8 +164,8 @@ type GoldenFixtures struct {
 	Dir string
 	// Fixtures is the in-memory set of fixture files created by the test.
 	Fixtures Fixtures
-	// Update causes the fixture files on disk to be updated if true.
-	Update bool
+	// Flags controls goldy's behavior.
+	Flags string
 	// Hint is displayed when comparing the in-memory fixtures with those on
 	// disk shows differences.
 	Hint string
@@ -176,16 +202,22 @@ func (gf *GoldenFixtures) Diff() (Diff, error) {
 	return diff, nil
 }
 
-// Test returns an error if the comparison between gf.Fixtures and the
-// golden fixtures in gf.Dir produced a diff. Or if gf.Update is true, it
+// Test returns an error if the comparison between gf.Fixtures and the golden
+// fixtures in gf.Dir produced a diff. Or if gf.Flags[FlagUpdate] is true, it
 // instead overwrites the golden fixtures in gf.Dir with those in gf.Fixtures
 // and only returns an error if the update fails.
 func (gf *GoldenFixtures) Test() error {
+	flags, err := parseFlags(gf.Flags)
+	if err != nil {
+		return err
+	}
+
 	diff, err := gf.Diff()
 	if err != nil {
 		return err
 	}
-	if gf.Update {
+
+	if flags[FlagUpdate] {
 		return gf.update(diff)
 	} else {
 		return gf.compare(diff)

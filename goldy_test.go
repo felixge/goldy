@@ -13,6 +13,40 @@ import (
 
 var gc = EnvConfig(DefaultEnvName)
 
+func Test_parseFlags(t *testing.T) {
+	tests := []struct {
+		Flags   string
+		Want    map[Flag]bool
+		WantErr string
+	}{
+		{Want: map[Flag]bool{}},
+		{Flags: "update", Want: map[Flag]bool{FlagUpdate: true}},
+		{Flags: "invalid", WantErr: `unknown flag: "invalid"`},
+		{Flags: "update,invalid", WantErr: `unknown flag: "invalid"`},
+		{Flags: "invalid,update", WantErr: `unknown flag: "invalid"`},
+		{Flags: "update,verbose", Want: map[Flag]bool{FlagUpdate: true, FlagVerbose: true}},
+		{Flags: "verbose,update", Want: map[Flag]bool{FlagUpdate: true, FlagVerbose: true}},
+	}
+
+	for _, test := range tests {
+		got, err := parseFlags(test.Flags)
+		if err == nil {
+			if test.WantErr != "" {
+				t.Errorf("got err=nil want=%s", test.WantErr)
+			} else if !reflect.DeepEqual(got, test.Want) {
+				t.Errorf("got=%#v want=%#v", got, test.Want)
+			}
+		} else {
+			if test.WantErr == "" {
+				t.Errorf("got err=%s want=nil", err)
+			} else if !strings.Contains(err.Error(), test.WantErr) {
+				t.Errorf("got err=%s want=%s", err, test.WantErr)
+			}
+
+		}
+	}
+}
+
 func TestInputFixtures(t *testing.T) {
 	tests := []struct {
 		Dir  []string
@@ -88,7 +122,6 @@ func TestGoldenFixtures(t *testing.T) {
 			c := DefaultConfig()
 			c.Dir = filepath.Dir(tmpDir)
 			testGf := c.GoldenFixtures(filepath.Base(tmpDir))
-			testGf.Update = false
 
 			comboM := map[string]bool{}
 			for _, state := range combo {
@@ -136,11 +169,11 @@ func TestGoldenFixtures(t *testing.T) {
 				t.Fatalf("gotErr=%v expectErr=%t", gotErr, expectErr)
 			}
 
-			testGf.Update = true
+			testGf.Flags = "update"
 			if err := testGf.Test(); err != nil {
 				t.Fatalf("update error: %v", err)
 			}
-			testGf.Update = false
+			testGf.Flags = ""
 			if err := testGf.Test(); err != nil {
 				t.Fatalf("re-test error: %v", err)
 			}
