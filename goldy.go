@@ -18,8 +18,8 @@ const (
 	// FlagUpdate causes goldy to update any modified or missing fixtures and
 	// to delete any fixtures that were removed.
 	FlagUpdate Flag = "update"
-	// FlagVerbose causes goldly to print a diff for mismatching fixtures.
-	FlagVerbose Flag = "verbose"
+	// FlagDiff causes goldly to print a diff for mismatching fixtures.
+	FlagDiff Flag = "diff"
 )
 
 func parseFlags(flags string) (map[Flag]bool, error) {
@@ -29,7 +29,7 @@ func parseFlags(flags string) (map[Flag]bool, error) {
 	}
 	for _, flag := range strings.Split(flags, ",") {
 		switch f := Flag(flag); f {
-		case FlagUpdate, FlagVerbose:
+		case FlagUpdate, FlagDiff:
 			r[f] = true
 		default:
 			return nil, fmt.Errorf("unknown flag: %q", flag)
@@ -80,7 +80,7 @@ func FlagConfig(name string) Config {
 	// Adding our flag more than once would panic, so let's not do that.
 	if _, ok := flagValues[name]; !ok {
 		var val string
-		flag.StringVar(&val, name, "", "Goldy flags: update, verbose")
+		flag.StringVar(&val, name, "", "Goldy flags: update, diff")
 		flagValues[name] = &val
 	}
 

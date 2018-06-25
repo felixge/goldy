@@ -24,8 +24,8 @@ func Test_parseFlags(t *testing.T) {
 		{Flags: "invalid", WantErr: `unknown flag: "invalid"`},
 		{Flags: "update,invalid", WantErr: `unknown flag: "invalid"`},
 		{Flags: "invalid,update", WantErr: `unknown flag: "invalid"`},
-		{Flags: "update,verbose", Want: map[Flag]bool{FlagUpdate: true, FlagVerbose: true}},
-		{Flags: "verbose,update", Want: map[Flag]bool{FlagUpdate: true, FlagVerbose: true}},
+		{Flags: "update,diff", Want: map[Flag]bool{FlagUpdate: true, FlagDiff: true}},
+		{Flags: "diff,update", Want: map[Flag]bool{FlagUpdate: true, FlagDiff: true}},
 	}
 
 	for _, test := range tests {
@@ -122,6 +122,7 @@ func TestGoldenFixtures(t *testing.T) {
 			c := DefaultConfig()
 			c.Dir = filepath.Dir(tmpDir)
 			testGf := c.GoldenFixtures(filepath.Base(tmpDir))
+			testGf.Flags = ""
 
 			comboM := map[string]bool{}
 			for _, state := range combo {
