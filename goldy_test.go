@@ -158,6 +158,7 @@ func TestGoldenFixtures(t *testing.T) {
 					}
 					testGf.Add(append([]byte("changed "), data...), name)
 				case "diff":
+					testGf.Flags = "diff"
 				default:
 					panic("BUG")
 				}

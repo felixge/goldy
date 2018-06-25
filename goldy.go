@@ -190,16 +190,16 @@ func (gf *GoldenFixtures) Diff() (Diff, error) {
 		return nil, fmt.Errorf("failed to load golden fixtures: %s", err)
 	}
 	diff := gf.Fixtures.Diff(want)
-
-	if gf.IgnoreUnexpected {
-		for path, result := range diff {
-			if result == DiffUnexpected {
-				delete(diff, path)
-			}
+	if !gf.IgnoreUnexpected {
+		return diff, nil
+	}
+	var newDiff Diff
+	for _, d := range diff {
+		if d.Kind != DiffUnexpected {
+			newDiff = append(newDiff, d)
 		}
 	}
-
-	return diff, nil
+	return newDiff, nil
 }
 
 // Test returns an error if the comparison between gf.Fixtures and the golden
@@ -226,18 +226,18 @@ func (gf *GoldenFixtures) Test() error {
 
 func (gf *GoldenFixtures) update(diff Diff) error {
 	msg := make([]string, 0, len(diff))
-	for _, path := range diff.Paths() {
-		switch diff[path] {
+	for _, d := range diff {
+		switch d.Kind {
 		case DiffUnexpected:
-			if err := os.Remove(path); err != nil {
-				msg = append(msg, fmt.Sprintf("could not remove: %s: %s", path, err))
+			if err := os.Remove(d.Path); err != nil {
+				msg = append(msg, fmt.Sprintf("could not remove: %s: %s", d.Path, err))
 			}
 		case DiffMissing, DiffChanged:
-			dir := filepath.Dir(path)
+			dir := filepath.Dir(d.Path)
 			if err := os.MkdirAll(dir, 0700); err != nil {
 				msg = append(msg, fmt.Sprintf("could not mkdir: %s: %s", dir, err))
-			} else if err := ioutil.WriteFile(path, gf.Fixtures[path], 0600); err != nil {
-				msg = append(msg, fmt.Sprintf("could not write: %s: %s", path, err))
+			} else if err := ioutil.WriteFile(d.Path, gf.Fixtures[d.Path], 0600); err != nil {
+				msg = append(msg, fmt.Sprintf("could not write: %s: %s", d.Path, err))
 			}
 		}
 	}
@@ -255,15 +255,17 @@ func (gf *GoldenFixtures) compare(diff Diff) error {
 	if len(diff) == 0 {
 		return nil
 	}
-	msg := make([]string, len(diff))
-	for i, path := range diff.Paths() {
-		switch diff[path] {
+	var msg []string
+	for _, d := range diff {
+		switch d.Kind {
 		case DiffUnexpected:
-			msg[i] = fmt.Sprintf("unexpected file: %s", path)
+			msg = append(msg, fmt.Sprintf("unexpected file: %s", d.Path))
 		case DiffMissing:
-			msg[i] = fmt.Sprintf("missing file: %s", path)
+			msg = append(msg, fmt.Sprintf("missing file: %s", d.Path))
 		case DiffChanged:
-			msg[i] = fmt.Sprintf("changed file: %s", path)
+			msg = append(msg, fmt.Sprintf("changed file: %s", d.Path))
+			//dmp := diffmatchpatch.New()
+			//diffs := dmp.DiffMain(text1, text2, false)
 		}
 	}
 	return fmt.Errorf(
@@ -314,23 +316,38 @@ func (f Fixtures) Add(data []byte, path ...string) {
 // Diff compares set a with set b and returns the diff. If a and b are equal,
 // the returned len(diff) is 0. See Fixtures.Diff for for more details.
 func (a Fixtures) Diff(b Fixtures) Diff {
-	diff := Diff{}
+	var diff Diff
 	// First pass through a finds all paths that exist in a but not b or that
 	// exist in both but hold different data.
 	for aPath, aData := range a {
+		d := &FileDiff{
+			Path: aPath,
+			A:    aData,
+		}
 		if bData, ok := b[aPath]; !ok {
-			diff[aPath] = DiffMissing
+			d.Kind = DiffMissing
+			diff = append(diff, d)
 		} else if !bytes.Equal(aData, bData) {
-			diff[aPath] = DiffChanged
+			d.Kind = DiffChanged
+			d.B = bData
+			diff = append(diff, d)
 		}
 	}
 	// Second pass through b is needed for finding paths that exist in b, but not
 	// in a.
 	for bPath, _ := range b {
-		if _, ok := a[bPath]; !ok {
-			diff[bPath] = DiffUnexpected
+		if bData, ok := a[bPath]; !ok {
+			diff = append(diff, &FileDiff{
+				Path: bPath,
+				B:    bData,
+				Kind: DiffUnexpected,
+			})
 		}
 	}
+
+	sort.Slice(diff, func(i, j int) bool {
+		return diff[i].Path < diff[j].Path
+	})
 	return diff
 }
 
@@ -346,20 +363,13 @@ func (f Fixtures) Paths() []string {
 	return sorted
 }
 
-// Diff maps paths from fixtures a and b to their DiffKind. See Fixtures.Diff
-// for more information.
-type Diff map[string]DiffKind
+type Diff []*FileDiff
 
-// Paths returns all path keys from d in ascending byte order.
-func (d Diff) Paths() []string {
-	sorted := make([]string, 0, len(d))
-	for p, _ := range d {
-		sorted = append(sorted, p)
-	}
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i] < sorted[j]
-	})
-	return sorted
+type FileDiff struct {
+	Path string
+	Kind DiffKind
+	A    []byte
+	B    []byte
 }
 
 // DiffKind describes how a file differs between fixture a and b. See
