@@ -56,32 +56,20 @@ func DefaultConfig() Config {
 // when calling Test on them.
 func EnvConfig(name string) Config {
 	return Config{
-		Flags: func() string { return os.Getenv(name) },
+		Flags: os.Getenv(name),
 		Hint:  name + "=update go test",
 	}.WithDefaults()
 }
-
-var (
-	flagValues = map[string]*string{}
-)
 
 // FlagConfig returns a new Config that registers a flag with the given name
 // with the global flag package to determine golden fixtures should be updated
 // or compared when calling Test on them. This method exists because the
 // author's hate for dogma exceeds his hate for global state. That being said,
 // he'll still shake his head if you end up using this method.
-func FlagConfig(name string) Config {
-	// Adding our flag more than once would panic, so let's not do that.
-	if _, ok := flagValues[name]; !ok {
-		var val string
-		flag.StringVar(&val, name, "", "Goldy flags: update, diff")
-		flagValues[name] = &val
-	}
-
-	return Config{
-		Hint:  "go test -" + name,
-		Flags: func() string { return *flagValues[name] },
-	}.WithDefaults()
+func FlagConfig(name string) *Config {
+	c := (Config{Hint: "go test -" + name}).WithDefaults()
+	flag.StringVar(&c.Flags, name, "", "Goldy flags: update, diff")
+	return &c
 }
 
 // Config allows you to customize your goldy integration. You're probably
@@ -90,10 +78,9 @@ type Config struct {
 	// Dir is the base dir used for loading input or golden fixtures. Set to
 	// "test-fixtures" by WithDefaults.
 	Dir string
-	// Flags is a func that returns a string containing flags that control goldy's
-	// behavior. It's a func rather than a simple string due
-	// to the complexity of implementing FlagConfig.
-	Flags func() string
+	// Flags is a comma separated string containing flags that control goldy's
+	// behavior.
+	Flags string
 	// Hint is a message displayed when golden fixtures fail comparison. It's
 	// intended to tell the user how to automatically update the fixtures.
 	Hint string
@@ -123,7 +110,7 @@ func (c Config) GoldenFixtures(path ...string) *GoldenFixtures {
 	return &GoldenFixtures{
 		Dir:              filepath.Join(append([]string{c.Dir}, path...)...),
 		Fixtures:         Fixtures{},
-		Flags:            c.Flags(),
+		Flags:            c.Flags,
 		Hint:             c.Hint,
 		IgnoreUnexpected: c.IgnoreUnexpected,
 		Exclude:          IsDotfile,
