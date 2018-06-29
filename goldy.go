@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/pmezard/go-difflib/difflib"
 )
@@ -64,7 +63,6 @@ func EnvConfig(name string) Config {
 
 var (
 	flagValues = map[string]*string{}
-	flagLock   sync.Mutex
 )
 
 // FlagConfig returns a new Config that registers a flag with the given name
@@ -73,12 +71,6 @@ var (
 // author's hate for dogma exceeds his hate for global state. That being said,
 // he'll still shake his head if you end up using this method.
 func FlagConfig(name string) Config {
-	// Concurrent calls to this func might happen when testing multiple packages
-	// at once, e.g. via go test ./... . Actually, I'm not 100% certain if go
-	// spawns child processes in this case, but better safe than sorry.
-	flagLock.Lock()
-	defer flagLock.Unlock()
-
 	// Adding our flag more than once would panic, so let's not do that.
 	if _, ok := flagValues[name]; !ok {
 		var val string
