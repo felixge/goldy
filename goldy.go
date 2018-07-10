@@ -310,7 +310,10 @@ func (f Fixtures) Add(data []byte, path ...string) {
 }
 
 // Diff compares set a with set b and returns the diff. If a and b are equal,
-// the returned len(diff) is 0. See Fixtures.Diff for for more details.
+// the returned len(diff) is 0. See Fixtures.Diff for for more details. The
+// main caller of this func is GoldenFixtures.Diff, in that context b is the
+// existing fixture on disk, and a is the results from the test and we want
+// to show the change from b to a.
 func (a Fixtures) Diff(b Fixtures) Diff {
 	var diff Diff
 	// First pass through a finds all paths that exist in a but not b or that
@@ -318,14 +321,14 @@ func (a Fixtures) Diff(b Fixtures) Diff {
 	for aPath, aData := range a {
 		d := &FileDiff{
 			Path: aPath,
-			A:    aData,
+			B:    aData,
 		}
 		if bData, ok := b[aPath]; !ok {
 			d.Kind = DiffMissing
 			diff = append(diff, d)
 		} else if !bytes.Equal(aData, bData) {
 			d.Kind = DiffChanged
-			d.B = bData
+			d.A = bData
 			diff = append(diff, d)
 		}
 	}
@@ -335,7 +338,7 @@ func (a Fixtures) Diff(b Fixtures) Diff {
 		if bData, ok := a[bPath]; !ok {
 			diff = append(diff, &FileDiff{
 				Path: bPath,
-				B:    bData,
+				A:    bData,
 				Kind: DiffUnexpected,
 			})
 		}

@@ -266,8 +266,8 @@ run `GOLDY=update go test` to automatically update all files above
 1 errors:
 changed file: test-fixtures/tmp/changed_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 
 run `GOLDY=update go test` to automatically update all files above
 ```
@@ -277,8 +277,8 @@ run `GOLDY=update go test` to automatically update all files above
 1 errors:
 changed file: test-fixtures/tmp/base_changed_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 
 run `GOLDY=update go test` to automatically update all files above
 ```
@@ -298,8 +298,8 @@ run `GOLDY=update go test` to automatically update all files above
 1 errors:
 changed file: test-fixtures/tmp/changed_ignore_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 
 run `GOLDY=update go test` to automatically update all files above
 ```
@@ -309,8 +309,8 @@ run `GOLDY=update go test` to automatically update all files above
 1 errors:
 changed file: test-fixtures/tmp/base_changed_ignore_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 
 run `GOLDY=update go test` to automatically update all files above
 ```
@@ -336,8 +336,8 @@ run `GOLDY=update go test` to automatically update all files above
 2 errors:
 changed file: test-fixtures/tmp/changed_missing_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 missing file: test-fixtures/tmp/changed_missing_diff/missing.txt
 
 run `GOLDY=update go test` to automatically update all files above
@@ -348,8 +348,8 @@ run `GOLDY=update go test` to automatically update all files above
 2 errors:
 changed file: test-fixtures/tmp/base_changed_missing_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 missing file: test-fixtures/tmp/base_changed_missing_diff/missing.txt
 
 run `GOLDY=update go test` to automatically update all files above
@@ -376,8 +376,8 @@ run `GOLDY=update go test` to automatically update all files above
 2 errors:
 changed file: test-fixtures/tmp/changed_ignore_missing_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 missing file: test-fixtures/tmp/changed_ignore_missing_diff/missing.txt
 
 run `GOLDY=update go test` to automatically update all files above
@@ -388,8 +388,8 @@ run `GOLDY=update go test` to automatically update all files above
 2 errors:
 changed file: test-fixtures/tmp/base_changed_ignore_missing_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 missing file: test-fixtures/tmp/base_changed_ignore_missing_diff/missing.txt
 
 run `GOLDY=update go test` to automatically update all files above
@@ -416,8 +416,8 @@ run `GOLDY=update go test` to automatically update all files above
 2 errors:
 changed file: test-fixtures/tmp/changed_unexpected_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 unexpected file: test-fixtures/tmp/changed_unexpected_diff/unexpected.txt
 
 run `GOLDY=update go test` to automatically update all files above
@@ -428,8 +428,8 @@ run `GOLDY=update go test` to automatically update all files above
 2 errors:
 changed file: test-fixtures/tmp/base_changed_unexpected_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 unexpected file: test-fixtures/tmp/base_changed_unexpected_diff/unexpected.txt
 
 run `GOLDY=update go test` to automatically update all files above
@@ -450,8 +450,8 @@ run `GOLDY=update go test` to automatically update all files above
 1 errors:
 changed file: test-fixtures/tmp/changed_ignore_unexpected_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 
 run `GOLDY=update go test` to automatically update all files above
 ```
@@ -461,8 +461,8 @@ run `GOLDY=update go test` to automatically update all files above
 1 errors:
 changed file: test-fixtures/tmp/base_changed_ignore_unexpected_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 
 run `GOLDY=update go test` to automatically update all files above
 ```
@@ -490,8 +490,8 @@ run `GOLDY=update go test` to automatically update all files above
 3 errors:
 changed file: test-fixtures/tmp/changed_missing_unexpected_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 missing file: test-fixtures/tmp/changed_missing_unexpected_diff/missing.txt
 unexpected file: test-fixtures/tmp/changed_missing_unexpected_diff/unexpected.txt
 
@@ -503,8 +503,8 @@ run `GOLDY=update go test` to automatically update all files above
 3 errors:
 changed file: test-fixtures/tmp/base_changed_missing_unexpected_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 missing file: test-fixtures/tmp/base_changed_missing_unexpected_diff/missing.txt
 unexpected file: test-fixtures/tmp/base_changed_missing_unexpected_diff/unexpected.txt
 
@@ -532,8 +532,8 @@ run `GOLDY=update go test` to automatically update all files above
 2 errors:
 changed file: test-fixtures/tmp/changed_ignore_missing_unexpected_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 missing file: test-fixtures/tmp/changed_ignore_missing_unexpected_diff/missing.txt
 
 run `GOLDY=update go test` to automatically update all files above
@@ -544,8 +544,8 @@ run `GOLDY=update go test` to automatically update all files above
 2 errors:
 changed file: test-fixtures/tmp/base_changed_ignore_missing_unexpected_diff/changed.txt
   @@ -1 +1 @@
-  -changed data for: changed.txt
-  +data for: changed.txt
+  -data for: changed.txt
+  +changed data for: changed.txt
 missing file: test-fixtures/tmp/base_changed_ignore_missing_unexpected_diff/missing.txt
 
 run `GOLDY=update go test` to automatically update all files above
